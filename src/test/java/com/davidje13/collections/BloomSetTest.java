@@ -2,15 +2,34 @@ package com.davidje13.collections;
 
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
+import static com.davidje13.TestUtils.averageTimeTakenMillis;
+import static com.davidje13.TestUtils.getMemoryUsage;
+import static com.davidje13.TestUtils.timeTakenMillis;
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.lessThan;
 
 public class BloomSetTest {
-	private final BloomSet<String> bloomSet = new BloomSet<>();
+	private final int TEST_MEMORY_KB = 96;
+	private final int TEST_MEMBERSHIP = 100000;
+
+	private final BloomSet<String> bloomSet = BloomSet.withMemoryAndExpectedSize(
+			TEST_MEMORY_KB * 1024 * 8,
+			TEST_MEMBERSHIP
+	);
 
 	@Test
 	public void bloomSet_implements_JavaUtilSet() {
@@ -34,15 +53,42 @@ public class BloomSetTest {
 	}
 
 	@Test
-	public void contains_returnsTrueForItemsWhichHaveBeenAdded() {
-		bloomSet.add("abc");
-		assertThat(bloomSet.contains("abc"), equalTo(true));
+	public void contains_returnsTrueForItemsWhichHaveBeenAdded_withCertainty() {
+		Map<Boolean, List<String>> membership = generateDeterministicRandomMembership(TEST_MEMBERSHIP * 2);
+		List<String> members = membership.get(true);
+
+		bloomSet.addAll(members);
+
+		double falseNegativeRatio = countFailureRatio(bloomSet::contains, members);
+		assertThat(falseNegativeRatio, equalTo(0.0));
 	}
 
 	@Test
 	public void contains_returnsFalseForItemsWhichHaveNotBeenAdded_withHighProbability() {
-		bloomSet.add("abc");
-		assertThat(bloomSet.contains("def"), equalTo(false));
+		Map<Boolean, List<String>> membership = generateDeterministicRandomMembership(TEST_MEMBERSHIP * 2);
+		List<String> members = membership.get(true);
+		List<String> nonmembers = membership.get(false);
+
+		bloomSet.addAll(members);
+
+		double falsePositiveRatio = countFailureRatio((v) -> !bloomSet.contains(v), nonmembers);
+		assertThat(falsePositiveRatio, lessThan(0.05));
+	}
+
+	@Test
+	public void expectedFalsePositiveRatio_givesAReasonableEstimate() {
+		Map<Boolean, List<String>> membership = generateDeterministicRandomMembership(TEST_MEMBERSHIP * 2);
+		List<String> members = membership.get(true);
+		List<String> nonmembers = membership.get(false);
+
+		bloomSet.addAll(members);
+
+		double actualFalsePositiveRatio = countFailureRatio((v) -> !bloomSet.contains(v), nonmembers);
+
+		double predicted = bloomSet.expectedFalsePositiveRatio(members.size());
+
+		assertThat(predicted, greaterThan(actualFalsePositiveRatio * 0.5));
+		assertThat(predicted, lessThan(actualFalsePositiveRatio * 2.0));
 	}
 
 	@Test
@@ -176,5 +222,85 @@ public class BloomSetTest {
 	@Test(expected = UnsupportedOperationException.class)
 	public void toArrayWithParameter_isNotSupported() {
 		bloomSet.toArray(new String[0]);
+	}
+
+	@Test
+	public void constructor_returnsQuickly() {
+		double millis = averageTimeTakenMillis(100, () -> new BloomSet(1024 * 1024 * 8, 1));
+
+		assertThat(millis, lessThan(2.0));
+	}
+
+	@Test
+	public void addingLargeNumbersOfItems_runsQuickly() {
+		long millis = timeTakenMillis(() -> {
+			for(int i = 0; i < 1000000; ++i) {
+				bloomSet.add("value-" + i);
+			}
+		});
+
+		assertThat(millis, lessThan(1000L));
+	}
+
+	@Test
+	public void addingLargeNumbersOfItems_consumesLittleMemory() {
+		long bytes = getMemoryUsage(1000, () -> {
+			BloomSet<String> set = new BloomSet<>(32 * 8, 1);
+			for(int i = 0; i < 1000; ++i) {
+				bloomSet.add("value-" + i);
+			}
+			return set;
+		});
+
+		assertThat(bytes, lessThan(512L));
+	}
+
+	@Test
+	@SuppressWarnings("ResultOfMethodCallIgnored")
+	public void contains_returnsQuickly_evenWhenSetIsLarge() {
+		seedLargeData();
+
+		double millis = averageTimeTakenMillis(100000, () -> bloomSet.contains("value-1234567"));
+
+		assertThat(millis, lessThan(0.001)); // 1 microsecond
+	}
+
+	@Test
+	@SuppressWarnings("ResultOfMethodCallIgnored")
+	public void isEmpty_runsQuickly_evenWhenSetIsLarge() {
+		seedLargeData();
+
+		double millis = averageTimeTakenMillis(100000, bloomSet::isEmpty);
+
+		assertThat(millis, lessThan(0.001)); // 1 microsecond
+	}
+
+	private void seedLargeData() {
+		for(int i = 0; i < TEST_MEMBERSHIP; ++i) {
+			bloomSet.add("value-" + i);
+		}
+	}
+
+	private Map<Boolean, List<String>> generateDeterministicRandomMembership(int totalSize) {
+		List<String> values = IntStream.range(0, totalSize)
+				.mapToObj((v) -> "value-" + v)
+				.collect(toList());
+		Collections.shuffle(values, new Random(1234));
+
+		Map<Boolean, List<String>> result = new HashMap<>();
+		result.put(true, values.subList(0, totalSize / 2));
+		result.put(false, values.subList(totalSize / 2, totalSize));
+		return result;
+	}
+
+	private <T> double countFailureRatio(Predicate<T> check, List<T> values) {
+		int failures = 0;
+		for(T value : values) {
+			if (!check.test(value)) {
+				++ failures;
+			}
+		}
+
+		return failures / (double) values.size();
 	}
 }
