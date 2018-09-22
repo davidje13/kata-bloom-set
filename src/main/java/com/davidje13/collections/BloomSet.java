@@ -115,12 +115,19 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 		values.stream()
 				.filter(String.class::isInstance)
 				.forEach((o) -> other.add((String) o));
-		other.internal.and(internal);
-		if (internal.equals(other.internal)) {
-			return false;
+		return retainAll(other);
+	}
+
+	public boolean retainAll(BloomSet values) {
+		if (
+				values.internal.size() != internal.size()
+				|| values.bucketsCache.length != bucketsCache.length
+		) {
+			return retainAll((Collection<String>) values);
 		}
-		internal = other.internal;
-		return true;
+		int oldCount = internal.cardinality();
+		internal.and(values.internal);
+		return internal.cardinality() != oldCount;
 	}
 
 	@Override
