@@ -1,6 +1,5 @@
 package com.davidje13.collections;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,7 +9,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
-public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
+public class BloomSet extends AbstractCollection<String> implements Set<String> {
 	public static double expectedFalsePositiveRatio(int items, int bits, int hashes) {
 		// http://pages.cs.wisc.edu/~cao/papers/summary-cache/node8.html
 		return Math.pow(1.0 - Math.pow(1.0 - 1.0 / bits, hashes * (double) items), hashes);
@@ -32,8 +31,8 @@ public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
 		}
 	}
 
-	public static <T> BloomSet<T> withMemoryAndExpectedSize(int bits, int expectedSize) {
-		return new BloomSet<>(bits, idealHashCount(expectedSize, bits));
+	public static BloomSet withMemoryAndExpectedSize(int bits, int expectedSize) {
+		return new BloomSet(bits, idealHashCount(expectedSize, bits));
 	}
 
 	private BitSet internal;
@@ -79,28 +78,13 @@ public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
 		}
 	}
 
-	private void getHashes(Object value, int[] target) {
-		if (value instanceof String) {
-			getHashes((String) value, target);
-			return;
-		}
-
-		int bucketCount = internal.size();
-		int hash = value.hashCode();
-
-		for (int i = 0; i < target.length; ++ i) {
-			target[i] = Math.floorMod(hash, bucketCount);
-			hash /= bucketCount;
-		}
-	}
-
 	@Override
 	public boolean contains(Object value) {
-		if (value == null) {
+		if (!(value instanceof String)) {
 			return false;
 		}
 
-		getHashes(value, bucketsCache);
+		getHashes((String) value, bucketsCache);
 		for (int bucket : bucketsCache) {
 			if (!internal.get(bucket)) {
 				return false;
@@ -110,7 +94,7 @@ public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
 	}
 
 	@Override
-	public boolean add(T value) {
+	public boolean add(String value) {
 		if (value == null) {
 			throw new NullPointerException();
 		}
@@ -126,10 +110,11 @@ public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public boolean retainAll(Collection<?> values) {
-		BloomSet<T> other = new BloomSet<>(internal.size(), bucketsCache.length);
-		other.addAll((Collection<T>) values);
+		BloomSet other = new BloomSet(internal.size(), bucketsCache.length);
+		values.stream()
+				.filter(String.class::isInstance)
+				.forEach((o) -> other.add((String) o));
 		other.internal.and(internal);
 		if (internal.equals(other.internal)) {
 			return false;
@@ -149,7 +134,7 @@ public class BloomSet<T> extends AbstractCollection<T> implements Set<T> {
 	}
 
 	@Override
-	public Iterator<T> iterator() {
+	public Iterator<String> iterator() {
 		throw new UnsupportedOperationException();
 	}
 }

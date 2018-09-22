@@ -26,7 +26,7 @@ public class BloomSetTest {
 	private final int TEST_MEMORY_KB = 96;
 	private final int TEST_MEMBERSHIP = 100000;
 
-	private final BloomSet<String> bloomSet = BloomSet.withMemoryAndExpectedSize(
+	private final BloomSet bloomSet = BloomSet.withMemoryAndExpectedSize(
 			TEST_MEMORY_KB * 1024 * 8,
 			TEST_MEMBERSHIP
 	);
@@ -245,7 +245,7 @@ public class BloomSetTest {
 	@Test
 	public void addingLargeNumbersOfItems_consumesLittleMemory() {
 		long bytes = getMemoryUsage(1000, () -> {
-			BloomSet<String> set = new BloomSet<>(32 * 8, 1);
+			BloomSet set = new BloomSet(32 * 8, 1);
 			for(int i = 0; i < 1000; ++i) {
 				bloomSet.add("value-" + i);
 			}
