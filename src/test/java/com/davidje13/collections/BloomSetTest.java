@@ -370,6 +370,7 @@ public class BloomSetTest {
 		assertThat(hash1, not(equalTo(hash2)));
 	}
 
+	@SuppressWarnings("deprecation")
 	@Test(expected = UnsupportedOperationException.class)
 	public void size_isNotSupported() {
 		bloomSet.size();
@@ -385,6 +386,7 @@ public class BloomSetTest {
 		bloomSet.removeAll(asList("abc", "def"));
 	}
 
+	@SuppressWarnings("deprecation")
 	@Test(expected = UnsupportedOperationException.class)
 	public void iterator_isNotSupported() {
 		bloomSet.iterator();
