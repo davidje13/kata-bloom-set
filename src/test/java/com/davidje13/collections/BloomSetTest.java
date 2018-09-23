@@ -143,6 +143,44 @@ public class BloomSetTest {
 		assertThat(bloomSet.addAll(asList("abc", "def", "ghi")), equalTo(false));
 	}
 
+	@Test
+	public void addAll_acceptsSimilarBloomSets() {
+		bloomSet.add("abc");
+		bloomSet.add("def");
+		bloomSet.add("ghi");
+
+		BloomSet bloomSet2 = BloomSet.withMemoryAndExpectedSize(
+				TEST_MEMORY_KB * 1024 * 8,
+				TEST_MEMBERSHIP
+		);
+		bloomSet2.add("def");
+		bloomSet2.add("ghi");
+		bloomSet2.add("jkl");
+
+		assertThat(bloomSet.addAll(bloomSet2), equalTo(true));
+
+		assertThat(bloomSet.contains("abc"), equalTo(true));
+		assertThat(bloomSet.contains("def"), equalTo(true));
+		assertThat(bloomSet.contains("ghi"), equalTo(true));
+		assertThat(bloomSet.contains("jkl"), equalTo(true));
+
+		assertThat(bloomSet.addAll(bloomSet2), equalTo(false));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void addAll_rejectsDifferentBloomSets() {
+		bloomSet.add("abc");
+		bloomSet.add("def");
+		bloomSet.add("ghi");
+
+		BloomSet bloomSet2 = new BloomSet(1024, 2);
+		bloomSet2.add("def");
+		bloomSet2.add("ghi");
+		bloomSet2.add("jkl");
+
+		bloomSet.addAll(bloomSet2);
+	}
+
 	@Test(expected = NullPointerException.class)
 	public void addAll_rejectsNullValues() {
 		bloomSet.addAll(asList("abc", null, "ghi"));
@@ -153,11 +191,51 @@ public class BloomSetTest {
 		bloomSet.add("abc");
 		bloomSet.add("def");
 		bloomSet.add("ghi");
+
 		bloomSet.retainAll(asList("def", "ghi", "jkl"));
+
 		assertThat(bloomSet.contains("abc"), equalTo(false));
 		assertThat(bloomSet.contains("def"), equalTo(true));
 		assertThat(bloomSet.contains("ghi"), equalTo(true));
 		assertThat(bloomSet.contains("jkl"), equalTo(false));
+	}
+
+	@Test
+	public void retainAll_acceptsSimilarBloomSets() {
+		bloomSet.add("abc");
+		bloomSet.add("def");
+		bloomSet.add("ghi");
+
+		BloomSet bloomSet2 = BloomSet.withMemoryAndExpectedSize(
+				TEST_MEMORY_KB * 1024 * 8,
+				TEST_MEMBERSHIP
+		);
+		bloomSet2.add("def");
+		bloomSet2.add("ghi");
+		bloomSet2.add("jkl");
+
+		assertThat(bloomSet.retainAll(bloomSet2), equalTo(true));
+
+		assertThat(bloomSet.contains("abc"), equalTo(false));
+		assertThat(bloomSet.contains("def"), equalTo(true));
+		assertThat(bloomSet.contains("ghi"), equalTo(true));
+		assertThat(bloomSet.contains("jkl"), equalTo(false));
+
+		assertThat(bloomSet.retainAll(bloomSet2), equalTo(false));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void retainAll_rejectsDifferentBloomSets() {
+		bloomSet.add("abc");
+		bloomSet.add("def");
+		bloomSet.add("ghi");
+
+		BloomSet bloomSet2 = new BloomSet(1024, 2);
+		bloomSet2.add("def");
+		bloomSet2.add("ghi");
+		bloomSet2.add("jkl");
+
+		bloomSet.retainAll(bloomSet2);
 	}
 
 	@Test

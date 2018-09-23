@@ -109,6 +109,13 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 		return changed;
 	}
 
+	public boolean addAll(BloomSet values) {
+		checkSimilar(values);
+		int oldCount = internal.cardinality();
+		internal.or(values.internal);
+		return internal.cardinality() != oldCount;
+	}
+
 	@Override
 	public boolean retainAll(Collection<?> values) {
 		BloomSet other = new BloomSet(internal.size(), bucketsCache.length);
@@ -119,12 +126,7 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	}
 
 	public boolean retainAll(BloomSet values) {
-		if (
-				values.internal.size() != internal.size()
-				|| values.bucketsCache.length != bucketsCache.length
-		) {
-			return retainAll((Collection<String>) values);
-		}
+		checkSimilar(values);
 		int oldCount = internal.cardinality();
 		internal.and(values.internal);
 		return internal.cardinality() != oldCount;
@@ -143,5 +145,14 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	@Override
 	public Iterator<String> iterator() {
 		throw new UnsupportedOperationException();
+	}
+
+	private void checkSimilar(BloomSet other) {
+		if (
+				other.internal.size() != internal.size()
+				|| other.bucketsCache.length != bucketsCache.length
+		) {
+			throw new IllegalArgumentException("BloomSets are not compatible");
+		}
 	}
 }
