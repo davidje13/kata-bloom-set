@@ -21,7 +21,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
 
+@SuppressWarnings("TypeMayBeWeakened")
 public class BloomSetTest {
 	private final int TEST_MEMORY_KB = 96;
 	private final int TEST_MEMBERSHIP = 100000;
@@ -270,6 +272,102 @@ public class BloomSetTest {
 		bloomSet.clear();
 		assertThat(bloomSet.isEmpty(), equalTo(true));
 		assertThat(bloomSet.contains("abc"), equalTo(false));
+	}
+
+	@Test
+	@SuppressWarnings("EqualsWithItself")
+	public void equals_returnsTrueForSelf() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+
+		assertThat(bloomSet1.equals(bloomSet1), equalTo(true));
+	}
+
+	@Test
+	@SuppressWarnings("ConstantConditions")
+	public void equals_returnsFalseForNull() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+
+		assertThat(bloomSet1.equals(null), equalTo(false));
+	}
+
+	@Test
+	public void equals_returnsTrueForSimilarSets() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("def");
+		bloomSet2.add("abc");
+
+		assertThat(bloomSet1.equals(bloomSet2), equalTo(true));
+	}
+
+	@Test
+	public void hashCode_returnsSameValueForSimilarSets() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("def");
+		bloomSet2.add("abc");
+
+		int hash1 = bloomSet1.hashCode();
+		int hash2 = bloomSet2.hashCode();
+		assertThat(hash1, equalTo(hash2));
+	}
+
+	@Test
+	public void equals_returnsFalseForSetsWithDifferentConfiguration() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 3);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("def");
+		bloomSet2.add("abc");
+
+		assertThat(bloomSet1.equals(bloomSet2), equalTo(false));
+	}
+
+	@Test
+	public void hashCode_returnsDifferentValuesForSetsWithDifferentConfiguration_withHighProbabiltiy() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 3);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("def");
+		bloomSet2.add("abc");
+
+		int hash1 = bloomSet1.hashCode();
+		int hash2 = bloomSet2.hashCode();
+		assertThat(hash1, not(equalTo(hash2)));
+	}
+
+	@Test
+	public void equals_returnsFalseForSetsWithDifferentValues_withHighProbabiltiy() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("abc");
+
+		assertThat(bloomSet1.equals(bloomSet2), equalTo(false));
+	}
+
+	@Test
+	public void hashCode_returnsDifferentValuesForSetsWithDifferentValues_withHighProbabiltiy() {
+		BloomSet bloomSet1 = new BloomSet(128, 2);
+		BloomSet bloomSet2 = new BloomSet(128, 2);
+		bloomSet1.add("abc");
+		bloomSet1.add("def");
+		bloomSet2.add("abc");
+
+		int hash1 = bloomSet1.hashCode();
+		int hash2 = bloomSet2.hashCode();
+		assertThat(hash1, not(equalTo(hash2)));
 	}
 
 	@Test(expected = UnsupportedOperationException.class)

@@ -147,6 +147,26 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
+	public boolean equals(Object other) {
+		if (!(other instanceof BloomSet)) {
+			return false;
+		}
+		if (other == this) {
+			return true;
+		}
+		BloomSet o = (BloomSet) other;
+		return (
+				o.internal.equals(internal)
+				&& o.bucketsCache.length == bucketsCache.length
+		);
+	}
+
+	@Override
+	public int hashCode() {
+		return internal.hashCode() + bucketsCache.length;
+	}
+
 	private void checkSimilar(BloomSet other) {
 		if (
 				other.internal.size() != internal.size()
