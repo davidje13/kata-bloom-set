@@ -59,6 +59,27 @@ public class MainIntegrationTest {
 		assertThat(out, equalTo("woo\n"));
 	}
 
+	@Test
+	public void main_displaysUsage_ifCalledWithoutArguments() {
+		String out = getStdOutFrom(() -> {
+			try {
+				Main.main(new String[]{});
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
+
+		assertThat(out, equalTo(
+				"Performs spell-checking against a given\n" +
+				"dictionary using a bloom set.\n" +
+				"\n" +
+				"Usage:\n" +
+				"  ./program <path_to_word_list>\n" +
+				"  - provide words to check to stdin\n" +
+				"  - non-matching words are reported to stdout\n"
+		));
+	}
+
 	private URL getResource(String name) {
 		ClassLoader loader = getClass().getClassLoader();
 		return loader.getResource(name);
