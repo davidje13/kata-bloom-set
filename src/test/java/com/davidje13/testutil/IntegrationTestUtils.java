@@ -1,4 +1,4 @@
-package com.davidje13;
+package com.davidje13.testutil;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

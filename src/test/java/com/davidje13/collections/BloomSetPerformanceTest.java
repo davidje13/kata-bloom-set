@@ -4,9 +4,9 @@ import org.junit.Test;
 
 import java.util.Collection;
 
-import static com.davidje13.TestUtils.averageMemoryUsageBytes;
-import static com.davidje13.TestUtils.averageTimeTakenMillis;
-import static com.davidje13.TestUtils.timeTakenMillis;
+import static com.davidje13.testutil.TestUtils.averageMemoryUsageBytes;
+import static com.davidje13.testutil.TestUtils.averageTimeTakenMillis;
+import static com.davidje13.testutil.TestUtils.timeTakenMillis;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;

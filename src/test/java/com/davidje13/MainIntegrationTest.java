@@ -2,9 +2,9 @@ package com.davidje13;
 
 import org.junit.Test;
 
-import static com.davidje13.IntegrationTestUtils.getResource;
-import static com.davidje13.IntegrationTestUtils.getStdOutFrom;
-import static com.davidje13.IntegrationTestUtils.setStdInContent;
+import static com.davidje13.testutil.IntegrationTestUtils.getResource;
+import static com.davidje13.testutil.IntegrationTestUtils.getStdOutFrom;
+import static com.davidje13.testutil.IntegrationTestUtils.setStdInContent;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 

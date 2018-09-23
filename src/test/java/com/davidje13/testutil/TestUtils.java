@@ -1,4 +1,4 @@
-package com.davidje13;
+package com.davidje13.testutil;
 
 import java.util.ArrayList;
 import java.util.Collection;
