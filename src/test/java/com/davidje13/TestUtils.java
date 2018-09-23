@@ -5,7 +5,9 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 public class TestUtils {
-	public static long timeTakenMillis(Runnable runnable) {
+	public static long timeTakenMillis(
+			Runnable runnable
+	) {
 		long begin = System.currentTimeMillis();
 		runnable.run();
 		long end = System.currentTimeMillis();
@@ -13,7 +15,10 @@ public class TestUtils {
 		return end - begin;
 	}
 
-	public static double averageTimeTakenMillis(int repetitions, Runnable runnable) {
+	public static double averageTimeTakenMillis(
+			int repetitions,
+			Runnable runnable
+	) {
 		long begin = System.currentTimeMillis();
 		for (int rep = 0; rep < repetitions; ++ rep) {
 			runnable.run();
@@ -23,18 +28,21 @@ public class TestUtils {
 		return (end - begin) / (double) repetitions;
 	}
 
-	public static long getMemoryUsage(int repetitions, Supplier<?> allocator) {
+	public static long averageMemoryUsageBytes(
+			int repetitions,
+			Supplier<?> allocator
+	) {
 		Collection<Object> holder = new ArrayList<>(repetitions);
-		long begin = getMemoryUsage();
+		long begin = memoryUsageBytes();
 		for (int rep = 0; rep < repetitions; ++ rep) {
 			holder.add(allocator.get());
 		}
-		long end = getMemoryUsage();
+		long end = memoryUsageBytes();
 
 		return (end - begin) / holder.size();
 	}
 
-	private static long getMemoryUsage() {
+	private static long memoryUsageBytes() {
 		System.gc();
 		Runtime runtime = Runtime.getRuntime();
 		return runtime.totalMemory() - runtime.freeMemory();

@@ -18,7 +18,11 @@ import java.util.Set;
  *
  * Supports String membership using an MD5 hash.
  */
-public class BloomSet extends AbstractCollection<String> implements Set<String> {
+@SuppressWarnings("WeakerAccess")
+public class BloomSet
+		extends AbstractCollection<String>
+		implements Set<String>
+{
 	/**
 	 * Calculates the idealised false-positive rate for a given configuration.
 	 *
@@ -27,9 +31,16 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	 * @param hashes the number of hashes used in the set
 	 * @return a value from 0 (no false positives) to 1 (always false positives)
 	 */
-	public static double expectedFalsePositiveRatio(int items, int bits, int hashes) {
+	public static double expectedFalsePositiveRatio(
+			int items,
+			int bits,
+			int hashes
+	) {
 		// http://pages.cs.wisc.edu/~cao/papers/summary-cache/node8.html
-		return Math.pow(1.0 - Math.pow(1.0 - 1.0 / bits, hashes * (double) items), hashes);
+		return Math.pow(
+				1.0 - Math.pow(1.0 - 1.0 / bits, hashes * (double) items),
+				hashes
+		);
 	}
 
 	/**
@@ -63,7 +74,10 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	 * @param expectedSize the expected number of items
 	 * @return an optimal BloomSet for the given configuration
 	 */
-	public static BloomSet withMemoryAndExpectedSize(int bits, int expectedSize) {
+	public static BloomSet withMemoryAndExpectedSize(
+			int bits,
+			int expectedSize
+	) {
 		return new BloomSet(bits, idealHashCount(expectedSize, bits));
 	}
 
@@ -99,7 +113,11 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	 * @see BloomSet#expectedFalsePositiveRatio(int, int, int)
 	 */
 	public double expectedFalsePositiveRatio(int items) {
-		return expectedFalsePositiveRatio(items, internal.size(), bucketsCache.length);
+		return expectedFalsePositiveRatio(
+				items,
+				memoryUsageBits(),
+				hashes()
+		);
 	}
 
 	/**
@@ -108,26 +126,6 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	@Override
 	public boolean isEmpty() {
 		return internal.isEmpty();
-	}
-
-	private void getHashes(String value, int[] target) {
-		md5.reset();
-		byte[] digest = md5.digest(value.getBytes(StandardCharsets.UTF_8));
-
-		int hashCount = target.length;
-		int bucketCount = internal.size();
-
-		for (int i = 0; i < hashCount; ++ i) {
-			target[i] = 0;
-		}
-		for (int p = 0; p < digest.length; ++ p) {
-			int i = p % hashCount;
-			target[i] = target[i] * 256 + digest[p];
-		}
-		for (int i = 0; i < hashCount; ++ i) {
-			int shift = i * bucketCount / hashCount;
-			target[i] = Math.floorMod(target[i] + shift, bucketCount);
-		}
 	}
 
 	/**
@@ -146,7 +144,7 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 			return false;
 		}
 
-		getHashes((String) value, bucketsCache);
+		populateBucketsCache((String) value);
 		for (int bucket : bucketsCache) {
 			if (!internal.get(bucket)) {
 				return false;
@@ -166,7 +164,7 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 			throw new NullPointerException();
 		}
 		boolean changed = false;
-		getHashes(value, bucketsCache);
+		populateBucketsCache(value);
 		for (int bucket : bucketsCache) {
 			if (!internal.get(bucket)) {
 				internal.set(bucket);
@@ -203,7 +201,7 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	 */
 	@Override
 	public boolean retainAll(Collection<?> values) {
-		BloomSet other = new BloomSet(internal.size(), bucketsCache.length);
+		BloomSet other = new BloomSet(memoryUsageBits(), hashes());
 		values.stream()
 				.filter(String.class::isInstance)
 				.forEach((o) -> other.add((String) o));
@@ -238,6 +236,26 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	@Override
 	public void clear() {
 		internal.clear();
+	}
+
+	/**
+	 * Returns the number of bits used by this set.
+	 *
+	 * @return the number of bits used by this set
+	 */
+	public int memoryUsageBits() {
+		return internal.size();
+	}
+
+	/**
+	 * Returns the number of hashes generated when adding elements or testing
+	 * membership.
+	 *
+	 * @return the number of hashes generated when adding elements or testing
+	 *         membership
+	 */
+	public int hashes() {
+		return bucketsCache.length;
 	}
 
 	/**
@@ -279,7 +297,7 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 		BloomSet o = (BloomSet) other;
 		return (
 				o.internal.equals(internal)
-				&& o.bucketsCache.length == bucketsCache.length
+				&& o.hashes() == hashes()
 		);
 	}
 
@@ -288,13 +306,36 @@ public class BloomSet extends AbstractCollection<String> implements Set<String> 
 	 */
 	@Override
 	public int hashCode() {
-		return internal.hashCode() + bucketsCache.length;
+		return internal.hashCode() + hashes();
+	}
+
+	private void populateBucketsCache(String value) {
+		md5.reset();
+		byte[] digest = md5.digest(value.getBytes(StandardCharsets.UTF_8));
+
+		int hashCount = hashes();
+		int bucketCount = memoryUsageBits();
+
+		for (int i = 0; i < hashCount; ++ i) {
+			bucketsCache[i] = 0;
+		}
+		for (int p = 0; p < digest.length; ++ p) {
+			int i = p % hashCount;
+			bucketsCache[i] = bucketsCache[i] * 256 + digest[p];
+		}
+		for (int i = 0; i < hashCount; ++ i) {
+			int shift = i * bucketCount / hashCount;
+			bucketsCache[i] = Math.floorMod(
+					bucketsCache[i] + shift,
+					bucketCount
+			);
+		}
 	}
 
 	private void checkSimilar(BloomSet other) {
 		if (
-				other.internal.size() != internal.size()
-				|| other.bucketsCache.length != bucketsCache.length
+				other.memoryUsageBits() != memoryUsageBits()
+				|| other.hashes() != hashes()
 		) {
 			throw new IllegalArgumentException("BloomSets are not compatible");
 		}
