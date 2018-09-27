@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.util.Scanner;
 
 public class Main {
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) {
 		if (args.length == 0) {
 			showUsage();
 			return;
@@ -23,8 +23,13 @@ public class Main {
 		);
 
 		Charset utf8 = StandardCharsets.UTF_8;
-		Files.lines(new File(args[0]).toPath(), utf8)
-				.forEach((word) -> set.add(word.toLowerCase()));
+		try {
+			Files.lines(new File(args[0]).toPath(), utf8)
+					.forEach((word) -> set.add(word.toLowerCase()));
+		} catch (IOException e) {
+			System.err.println("Failed to load word list from " + args[0]);
+			return;
+		}
 
 		try (Scanner scanner = new Scanner(System.in, utf8.name())) {
 			scanner
@@ -36,12 +41,12 @@ public class Main {
 	}
 
 	private static void showUsage() {
-		System.out.println("Performs spell-checking against a given");
-		System.out.println("dictionary using a bloom set.");
-		System.out.println();
-		System.out.println("Usage:");
-		System.out.println("  ./program <path_to_word_list>");
-		System.out.println("  - provide words to check to stdin");
-		System.out.println("  - non-matching words are reported to stdout");
+		System.err.println("Performs spell-checking against a given");
+		System.err.println("dictionary using a bloom set.");
+		System.err.println();
+		System.err.println("Usage:");
+		System.err.println("  ./program <path_to_word_list>");
+		System.err.println("  - provide words to check to stdin");
+		System.err.println("  - non-matching words are reported to stdout");
 	}
 }

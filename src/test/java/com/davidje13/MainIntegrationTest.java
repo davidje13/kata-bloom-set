@@ -1,9 +1,10 @@
 package com.davidje13;
 
+import com.davidje13.testutil.IntegrationTestUtils.Output;
 import org.junit.Test;
 
+import static com.davidje13.testutil.IntegrationTestUtils.getOutputFrom;
 import static com.davidje13.testutil.IntegrationTestUtils.getResource;
-import static com.davidje13.testutil.IntegrationTestUtils.getStdOutFrom;
 import static com.davidje13.testutil.IntegrationTestUtils.setStdInContent;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -14,9 +15,10 @@ public class MainIntegrationTest {
 		String input = "foo abc baz def";
 
 		setStdInContent(input);
-		String out = getStdOutFrom(this::runWithTestWordList);
+		Output output = getOutputFrom(this::runWithTestWordList);
 
-		assertThat(out, equalTo("abc\ndef\n"));
+		assertThat(output.out, equalTo("abc\ndef\n"));
+		assertThat(output.err, equalTo(""));
 	}
 
 	@Test
@@ -24,9 +26,9 @@ public class MainIntegrationTest {
 		String input = "FOO";
 
 		setStdInContent(input);
-		String out = getStdOutFrom(this::runWithTestWordList);
+		Output output = getOutputFrom(this::runWithTestWordList);
 
-		assertThat(out, equalTo(""));
+		assertThat(output.out, equalTo(""));
 	}
 
 	@Test
@@ -34,22 +36,30 @@ public class MainIntegrationTest {
 		String input = "foo,woo";
 
 		setStdInContent(input);
-		String out = getStdOutFrom(this::runWithTestWordList);
+		Output output = getOutputFrom(this::runWithTestWordList);
 
-		assertThat(out, equalTo("woo\n"));
+		assertThat(output.out, equalTo("woo\n"));
+	}
+
+	@Test
+	public void main_reportsAnErrorIfTheWordListIsNotFound() {
+		String input = "foo,woo";
+
+		setStdInContent(input);
+		Output output = getOutputFrom(() -> Main.main(new String[]{"nope"}));
+
+		assertThat(output.out, equalTo(""));
+		assertThat(output.err, equalTo(
+				"Failed to load word list from nope\n"
+		));
 	}
 
 	@Test
 	public void main_displaysUsage_ifCalledWithoutArguments() {
-		String out = getStdOutFrom(() -> {
-			try {
-				Main.main(new String[]{});
-			} catch(Exception e) {
-				throw new RuntimeException(e);
-			}
-		});
+		Output output = getOutputFrom(() -> Main.main(new String[]{}));
 
-		assertThat(out, equalTo(
+		assertThat(output.out, equalTo(""));
+		assertThat(output.err, equalTo(
 				"Performs spell-checking against a given\n" +
 				"dictionary using a bloom set.\n" +
 				"\n" +
@@ -61,12 +71,8 @@ public class MainIntegrationTest {
 	}
 
 	private void runWithTestWordList() {
-		try {
-			Main.main(new String[]{
-					getResource("word-list.txt").getPath()
-			});
-		} catch(Exception e) {
-			throw new RuntimeException(e);
-		}
+		Main.main(new String[]{
+				getResource("word-list.txt").getPath()
+		});
 	}
 }
